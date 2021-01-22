@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Main-Class: com.bula.carder.Main
+Manifest-Version: 1.0
+Specification-Title: Buddy Carder: sample playing cards recognizer
+Implementation-Title: Buddy Carder: sample playing cards recognizer
+Specification-Version: 0.1
+Implementation-Version: 0.1
+Specification-Vendor: Buddy Lancer
+Implementation-Vendor: Buddy Lancer
+Copyright: Copyright 2021 Buddy Lancer
+Release-Date: 2021.01.24
