@@ -19,13 +19,18 @@ public class Controller {
 
     private ArrayList<BufferedImage> nominalImages = new ArrayList<>(), suitImages = new ArrayList<>(); // Stored images
 
-    private final short cardX[] = { 143, 215, 286, 358, 429 }, cardY = 585, cardSizeX = 64, cardSizeY = 85; // Hardcoded for now
-    private final short nominalShiftX = 15, nominalShiftY = 18, suitShiftX = 24, suitShiftY = 20; // Hardcoded for now
+    // Hardcoded for now
+    private final Dimension imageSize = new Dimension(636, 1166), cardSize = new Dimension(64, 85);  // Area and card size
+    private final int cardX[] = { 143, 215, 286, 358, 429 }, cardY = 585;
+    private final Dimension nominalShift = new Dimension(15, 18), suitShift = new Dimension(24, 20);
+    private final Dimension extra10Shift = new Dimension(5, 0); // Extra shift for "10" as it is more wide than others
+    private final int grayRGB = new Color(120, 120, 120).getRGB(); // For identification of "gray" cards
+    private final int colorThreshold = 100; // For identification whether a card is on place or not
+    private final Dimension delta = new Dimension(7, 7); // Extend rectangle a little for proper identification of nominal or suit
+    private final int xorHashThreshold = 60; // How much non-white pixels are allowed during XOR operation
 
-    private int nominalSize[] = {0, 0}, suitSize[] = {0, 0}; // Calculated maximum size for reference symbols (nominals & suits)
+    private Dimension nominalSize = new Dimension(0, 0), suitSize = new Dimension(0, 0); // Calculated maximum size for reference symbols (nominal & suit)
 
-    private final int deltaX = 7, deltaY = 7; // Extend rectangle a little for proper identification of nominal or suit
-    private final int xorHashThreshold = 50; // How much non-white pixels are allowed during XOR operation
     private Integer[] arrayDeltaX, arrayDeltaY; // Store the list of deltas in form of (0, 1, -1, 2, -2, ..., deltaN/2, -deltaN/2)
 
     private final int whiteRGB = Color.WHITE.getRGB(), blackRGB = Color.BLACK.getRGB();
@@ -42,8 +47,8 @@ public class Controller {
             System.out.println("Can not preload Nominal or Suit images!");
             System.exit(1);
         }
-        arrayDeltaX = createArrayWithDeltas(deltaX);
-        arrayDeltaY = createArrayWithDeltas(deltaY);
+        arrayDeltaX = createArrayWithDeltas(delta.width);
+        arrayDeltaY = createArrayWithDeltas(delta.height);
     }
 
     private Integer[] createArrayWithDeltas(int delta) {
@@ -56,16 +61,16 @@ public class Controller {
         return list.toArray(new Integer[] {});
     }
 
-    public void preloadImages(String[] names, ArrayList<BufferedImage> images, int[] size) throws Exception {
+    public void preloadImages(String[] names, ArrayList<BufferedImage> images, Dimension size) throws Exception {
         for (String name : names) {
-            BufferedImage image = ImageIO.read(classLoader.getResourceAsStream(name + ".png"));
+            BufferedImage image = ImageIO.read(classLoader.getResourceAsStream("com/bula/carder/resources/" + name + ".png"));
             images.add(getBlackAndWhiteImage(image, false)); // Store black & white image
-            size[0] = Math.max(image.getWidth(), size[0]);
-            size[1] = Math.max(image.getHeight(), size[1]);
+            size.width = Math.max(image.getWidth(), size.width);
+            size.height = Math.max(image.getHeight(), size.height);
         }
     }
 
-    public String identifyCards(int counter, File file) {
+    public String identifyCards(File file /*[*/, int counter, int[] nominalHash, int[] suitHash /*]*/) {
         BufferedImage image;
         try {
             image = ImageIO.read(file);
@@ -73,67 +78,73 @@ public class Controller {
         catch (Exception ex) {
             return("Can not load image '" + file.getName() + "'! Skipped for now!");
         }
-        if (image.getWidth() < 636 || image.getHeight() < 1166) // Very simple testing for required image type
+        if (image.getWidth() < imageSize.width || image.getHeight() < imageSize.height) // Very simple testing for required image type
             return "This is not required image!";
         String cards = "";
         fileNo = counter; //DEBUG
         for (int n = 0; n < 5; n++) {
             cardNo = n + 1; //DEBUG
-            cards += identifyCard(image, cardX[n], cardY);
+            cards += identifyCard(image, cardX, cardY, n /*[*/, nominalHash, suitHash /*]*/);
         }
         return cards;
     }
 
-    private String identifyCard(BufferedImage image, int x, int y) {
-        Color middle = new Color(image.getRGB(x + half(cardSizeX), y + half(cardSizeY)));
-        if (middle.getRed() < 100 && middle.getGreen() < 100 && middle.getBlue() < 100) // Card not found at this position - skip position.
+    private String identifyCard(BufferedImage image, int[] x, int y, int cardNo /*[*/, int[] nominalHash, int[] suitHash /*]*/) {
+        Color middle = new Color(image.getRGB(x[cardNo] + half(cardSize.width), y + half(cardSize.height)));
+        if (middle.getRed() < colorThreshold && middle.getGreen() < colorThreshold && middle.getBlue() < colorThreshold) // Card not found at this position - skip position.
             return "";
 
         checkNo = 1; //DEBUG
-        String nominal = identifyNominalOrSuit(image, (x + nominalShiftX), (y + nominalShiftY), nominalImages, nominalNames, nominalSize);
+        String nominal = identifyNominalOrSuit(image, (x[cardNo] + nominalShift.width), (y + nominalShift.height), nominalImages, nominalNames, nominalSize, cardNo /*[*/, nominalHash /*]*/);
         checkNo = 2; //DEBUG
-        String suit = identifyNominalOrSuit(image, (x + cardSizeX) - suitShiftX, (y + cardSizeY) - suitShiftY, suitImages, suitNames, suitSize);
+        String suit = identifyNominalOrSuit(image, (x[cardNo] + cardSize.width) - suitShift.width, (y + cardSize.height) - suitShift.height, suitImages, suitNames, suitSize, cardNo /*[*/, suitHash/*]*/);
         return nominal + suit.charAt(0);
     }
 
-    private String identifyNominalOrSuit(BufferedImage image, int x, int y, ArrayList<BufferedImage> images, String[] names, int[] size) {
+    private String identifyNominalOrSuit(BufferedImage image, int x, int y, ArrayList<BufferedImage> images, String[] names, Dimension size, int cardNo /*[*/, int[] cardsHash /*]*/) {
         String result = "?";
+        int hash, minHash = Integer.MAX_VALUE, minHashAt = -1, hashArray[] = new int[names.length];
         for (int n = 0; n < names.length; n++) {
-            int hash = calcualateXorHash(image, x - half(size[0]), y - half(size[1]), images.get(n), n, size);
-            if (hash < xorHashThreshold) {
-                result = names[n];
-                break;
+            hash = calcualateXorHash(image, x - half(size.width), y - half(size.height), images.get(n), size, n);
+            if (hash < minHash) {
+                minHash = hash;
+                minHashAt = n;
             }
         }
+        cardsHash[cardNo] = minHash; //DEBUG
+        if (minHash < xorHashThreshold)
+            result = names[minHashAt];
         return result;
     }
 
-    private int calcualateXorHash(BufferedImage image, int shiftX, int shiftY, BufferedImage image2, int n, int[] referenceSize) {
+    private int calcualateXorHash(BufferedImage image, int shiftX, int shiftY, BufferedImage image2, Dimension referenceSize, int nominalOrSuitNo) {
+        int extraShiftX = nominalNames[nominalOrSuitNo] == "10" ? extra10Shift.width : 0; // Workaround -- shift "10" a little more as it is more wide than others
         BufferedImage image1 =
-                getBlackAndWhiteImage(image.getSubimage(shiftX - half(deltaX), shiftY - half(deltaY), referenceSize[0] + deltaX + (n==9?5:0), referenceSize[1] + deltaY), true);
-        //DEBUG START
-        if (fileNo == 194 && cardNo == 2 && checkNo == 1 && n == 9) {
+                getBlackAndWhiteImage(image.getSubimage(shiftX - half(delta.width), shiftY - half(delta.height), referenceSize.width + delta.width + extraShiftX, referenceSize.height + delta.height), true);
+        /*[*/
+        if (fileNo == 1 && cardNo == 3 && ((checkNo == 1 && nominalNames[nominalOrSuitNo] == "10") || (checkNo == 2 && suitNames[nominalOrSuitNo] == "?????"))) {
             int x=1;
         }
-        //DEBUG END
-        int shiftXa = half(image1.getWidth() - image2.getWidth()) - 1 + half(deltaX);
-        int shiftYa = half(image1.getHeight() - image2.getHeight()) - 1 + half(deltaY);
-        int hash = xorHashThreshold + 1; // Set as "Not identified" initially
-    outer:
+        /*]*/
+        int shiftXa = half(image1.getWidth() - image2.getWidth()) - 1 + half(delta.width);
+        int shiftYa = half(image1.getHeight() - image2.getHeight()) - 1 + half(delta.height);
+        int hash = -1, minHash = Integer.MAX_VALUE;
         for (int xd : arrayDeltaX) {
             for (int yd : arrayDeltaY) {
-                if ((hash = calculateXorHash(image1, shiftXa + xd, shiftYa + yd, image2)) < xorHashThreshold)
-                    break outer;
+                if ((hash = calculateXorHash(image1, shiftXa + xd, shiftYa + yd, image2)) < minHash)
+                    minHash = hash;
             }
         }
-        return hash;
+        return minHash;
     }
 
     private int calculateXorHash(BufferedImage image1, int shiftX, int shiftY, BufferedImage image2) {
         int hash = 0;
     outer:
-        for (int y = 0; y < image2.getHeight() - 1; y++) {
-            for (int x = 0; x < image2.getWidth() - 1; x++) {
+        for (int y = 0; y < image2.getHeight(); y++) {
+            for (int x = 0; x < image2.getWidth(); x++) {
+                if (x + shiftX >= image1.getWidth() || y + shiftY >= image1.getHeight())
+                    continue;
                 if ((image1.getRGB(x + shiftX, y + shiftY) ^ image2.getRGB(x, y)) != 0)
                     hash++;
                 if (hash > xorHashThreshold) // Break as hash too large already, don't check further
@@ -146,8 +157,7 @@ public class Controller {
     private void fixGrayAndOrangeColor(BufferedImage image) {
         for (int x = 0; x < image.getWidth(); x++) {
             for (int y = 0; y < image.getHeight(); y++) {
-                Color color = new Color(image.getRGB(x, y));
-                if (color.getRed() == 120 && color.getGreen() == 120 && color.getBlue() == 120)
+                if (image.getRGB(x, y) == grayRGB)
                     image.setRGB(x, y, whiteRGB);
             }
         }
