@@ -21,7 +21,7 @@ public class Controller {
 
     // Hardcoded for now
     private final Dimension imageSize = new Dimension(636, 1166), cardSize = new Dimension(64, 85);  // Area and card size
-    private final int cardX[] = { 143, 215, 286, 358, 429 }, cardY = 585;
+    private final Point[] cards = { new Point(143, 585), new Point(215, 585), new Point(286, 585), new Point(358, 585), new Point(429, 585) };
     private final Dimension nominalShift = new Dimension(15, 18), suitShift = new Dimension(24, 20);
     private final Dimension extra10Shift = new Dimension(5, 0); // Extra shift for "10" as it is more wide than others
     private final int grayRGB = new Color(120, 120, 120).getRGB(); // For identification of "gray" cards
@@ -61,7 +61,7 @@ public class Controller {
         return list.toArray(new Integer[] {});
     }
 
-    public void preloadImages(String[] names, ArrayList<BufferedImage> images, Dimension size) throws Exception {
+    private void preloadImages(String[] names, ArrayList<BufferedImage> images, Dimension size) throws Exception {
         for (String name : names) {
             BufferedImage image = ImageIO.read(classLoader.getResourceAsStream("com/bula/carder/resources/" + name + ".png"));
             images.add(getBlackAndWhiteImage(image, false)); // Store black & white image
@@ -80,35 +80,35 @@ public class Controller {
         }
         if (image.getWidth() < imageSize.width || image.getHeight() < imageSize.height) // Very simple testing for required image type
             return "This is not required image!";
-        String cards = "";
+        String cardsFound = "";
         fileNo = counter; //DEBUG
         for (int n = 0; n < 5; n++) {
             cardNo = n + 1; //DEBUG
-            cards += identifyCard(image, cardX, cardY, n /*[*/, nominalHash, suitHash /*]*/);
+            cardsFound += identifyCard(image, cards[n] /*[*/, n, nominalHash, suitHash /*]*/);
         }
-        return cards;
+        return cardsFound;
     }
 
-    private String identifyCard(BufferedImage image, int[] x, int y, int cardNo /*[*/, int[] nominalHash, int[] suitHash /*]*/) {
-        Color middle = new Color(image.getRGB(x[cardNo] + half(cardSize.width), y + half(cardSize.height)));
+    private String identifyCard(BufferedImage image, Point card /*[*/, int cardNo, int[] nominalHash, int[] suitHash /*]*/) {
+        Color middle = new Color(image.getRGB(card.x + half(cardSize.width), card.y + half(cardSize.height)));
         if (middle.getRed() < colorThreshold && middle.getGreen() < colorThreshold && middle.getBlue() < colorThreshold) // Card not found at this position - skip position.
             return "";
 
         checkNo = 1; //DEBUG
-        String nominal = identifyNominalOrSuit(image, (x[cardNo] + nominalShift.width), (y + nominalShift.height), nominalImages, nominalNames, nominalSize, cardNo /*[*/, nominalHash /*]*/);
+        String nominal = identifyNominalOrSuit(image, (card.x + nominalShift.width), (card.y + nominalShift.height), nominalImages, nominalNames, nominalSize /*[*/, cardNo, nominalHash /*]*/);
         checkNo = 2; //DEBUG
-        String suit = identifyNominalOrSuit(image, (x[cardNo] + cardSize.width) - suitShift.width, (y + cardSize.height) - suitShift.height, suitImages, suitNames, suitSize, cardNo /*[*/, suitHash/*]*/);
+        String suit = identifyNominalOrSuit(image, (card.x + cardSize.width) - suitShift.width, (card.y + cardSize.height) - suitShift.height, suitImages, suitNames, suitSize /*[*/, cardNo, suitHash/*]*/);
         return nominal + suit.charAt(0);
     }
 
-    private String identifyNominalOrSuit(BufferedImage image, int x, int y, ArrayList<BufferedImage> images, String[] names, Dimension size, int cardNo /*[*/, int[] cardsHash /*]*/) {
+    private String identifyNominalOrSuit(BufferedImage image, int x, int y, ArrayList<BufferedImage> images, String[] names, Dimension size, /*[*/ int cardNo, int[] cardsHash /*]*/) {
         String result = "?";
-        int hash, minHash = Integer.MAX_VALUE, minHashAt = -1, hashArray[] = new int[names.length];
-        for (int n = 0; n < names.length; n++) {
-            hash = calcualateXorHash(image, x - half(size.width), y - half(size.height), images.get(n), size, n);
+        int minHash = Integer.MAX_VALUE, minHashAt = -1, hashArray[] = new int[names.length];
+        for (int nameNo = 0; nameNo < names.length; nameNo++) {
+            int hash = calcualateXorHash(image, x - half(size.width), y - half(size.height), images.get(nameNo), size, nameNo);
             if (hash < minHash) {
                 minHash = hash;
-                minHashAt = n;
+                minHashAt = nameNo;
             }
         }
         cardsHash[cardNo] = minHash; //DEBUG
@@ -129,9 +129,9 @@ public class Controller {
         int shiftXa = half(image1.getWidth() - image2.getWidth()) - 1 + half(delta.width);
         int shiftYa = half(image1.getHeight() - image2.getHeight()) - 1 + half(delta.height);
         int hash = -1, minHash = Integer.MAX_VALUE;
-        for (int xd : arrayDeltaX) {
-            for (int yd : arrayDeltaY) {
-                if ((hash = calculateXorHash(image1, shiftXa + xd, shiftYa + yd, image2)) < minHash)
+        for (int deltaX : arrayDeltaX) {
+            for (int deltaY : arrayDeltaY) {
+                if ((hash = calculateXorHash(image1, shiftXa + deltaX, shiftYa + deltaY, image2)) < minHash)
                     minHash = hash;
             }
         }
