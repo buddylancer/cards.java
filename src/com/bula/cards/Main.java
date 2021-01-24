@@ -1,13 +1,14 @@
-// Buddy Carder: sample playing cards recognizer.
+// Buddy Cards: sample playing cards recognizer.
 // Copyright (c) 2021 Buddy Lancer. All rights reserved.
 // Author - Buddy Lancer <http://www.buddylancer.com>.
 // Licensed under the MIT license
 
-package com.bula.carder;
+package com.bula.cards;
 
 import java.io.File;
 
 public class Main {
+    private static final boolean debugPrint = false; //DEBUG
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -26,19 +27,21 @@ public class Main {
             String result = controller.identifyCards(file /*[*/, fileNo, nominalHash, suitHash /*]*/);
             System.out.print(file.getName() + " - " + result);
             /*[*/
-            System.out.print("; FileNo: " + fileNo + ";");
+            if (debugPrint) {
+                System.out.print("; FileNo: " + fileNo + ";");
 
-            System.out.print(" Nominal Hash:[");
-            for (int n = 0; n < 5; n++) {
-                if (nominalHash[n] != -1)
-                    System.out.print((n != 0 ? ", " : "") + nominalHash[n]);
+                System.out.print(" Nominal Hash:[");
+                for (int n = 0; n < 5; n++) {
+                    if (nominalHash[n] != -1)
+                        System.out.print((n != 0 ? ", " : "") + nominalHash[n]);
+                }
+                System.out.print("]; Suit Hash:[");
+                for (int n = 0; n < 5; n++) {
+                    if (suitHash[n] != -1)
+                        System.out.print((n != 0 ? ", " : "") + suitHash[n]);
+                }
+                System.out.print("]");
             }
-            System.out.print("]; Suit Hash:[");
-            for (int n = 0; n < 5; n++) {
-                if (suitHash[n] != -1)
-                    System.out.print((n != 0 ? ", " : "") + suitHash[n]);
-            }
-            System.out.print("]");
             /*]*/
 
             System.out.println();
@@ -49,11 +52,13 @@ public class Main {
             }
         }
         /*[*/
-        long totalTime = System.currentTimeMillis() - startTime;
-        System.out.println(
-                "Files:" + fileNo + ";" +
-                " Not Identified:" + notIdentified + " (" + ((float)notIdentified * 100 / fileNo) + "%);" +
-                " Time:" + totalTime + " ms; Per file:" + totalTime / fileNo + " ms.");
+        if (debugPrint) {
+            long totalTime = System.currentTimeMillis() - startTime;
+            System.out.println(
+                    "Files:" + fileNo + ";" +
+                            " Not Identified:" + notIdentified + " (" + ((float) notIdentified * 100 / fileNo) + "%);" +
+                            " Time:" + totalTime + " ms; Per file:" + totalTime / fileNo + " ms.");
+        }
         /*]*/
     }
 }

@@ -1,2 +1,2 @@
-# carder.java
-Buddy Carder: sample playing cards recognizer
+# cards.java
+Buddy Cards: sample playing cards recognizer

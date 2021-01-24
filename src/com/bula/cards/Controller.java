@@ -1,9 +1,9 @@
-// Buddy Carder: sample playing cards recognizer.
+// Buddy Cards: sample playing cards recognizer.
 // Copyright (c) 2021 Buddy Lancer. All rights reserved.
 // Author - Buddy Lancer <http://www.buddylancer.com>.
 // Licensed under the MIT license
 
-package com.bula.carder;
+package com.bula.cards;
 
 import javax.imageio.*;
 import java.awt.*;
@@ -35,6 +35,8 @@ public class Controller {
 
     private final int whiteRGB = Color.WHITE.getRGB(), blackRGB = Color.BLACK.getRGB();
 
+    private final String resourcesFolder = "com/bula/cards/resources/";
+
     private int fileNo = -1, cardNo = -1, checkNo = -1; //DEBUG
 
     public Controller() {
@@ -63,7 +65,7 @@ public class Controller {
 
     private void preloadImages(String[] names, ArrayList<BufferedImage> images, Dimension size) throws Exception {
         for (String name : names) {
-            BufferedImage image = ImageIO.read(classLoader.getResourceAsStream("com/bula/carder/resources/" + name + ".png"));
+            BufferedImage image = ImageIO.read(classLoader.getResourceAsStream(resourcesFolder + name + ".png"));
             images.add(getBlackAndWhiteImage(image, false)); // Store black & white image
             size.width = Math.max(image.getWidth(), size.width);
             size.height = Math.max(image.getHeight(), size.height);
