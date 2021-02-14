@@ -6,35 +6,39 @@
 package com.bula.cards;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Hashtable;
 
 public class Main {
-    private static final boolean debugPrint = false; //DEBUG
+    private static final boolean debugPrint = true; //DEBUG
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.out.println("Usage: Program Folder");
             System.exit(1);
         }
-        Controller controller = new Controller();
-
-        int fileNo = 0, notIdentified = 0;
-        File[] filesInFolder = new File(args[0]).listFiles();
+        
         long startTime = System.currentTimeMillis(); //DEBUG
-        for (File file : filesInFolder) {
-            if (!file.getName().endsWith(".png"))
-                continue;
-            fileNo++; /*[*/ int[] nominalHash = new int[] { -1, -1, -1, -1, -1}, suitHash = new int[] { -1, -1, -1, -1, -1}; /*]*/
-            String result = controller.identifyCards(file /*[*/, fileNo, nominalHash, suitHash /*]*/);
-            System.out.print(file.getName() + " - " + result);
+        
+        FilesController filesController = new FilesController(args[0]);
+        CardsController cardsController = new CardsController();
+        
+        int fileNo = 0;
+        for (String fileName : filesController.getFileNames()) {
+            String result = filesController.processFile(fileName, cardsController);
+            
+            System.out.print(fileName+ " - " + result);
             /*[*/
             if (debugPrint) {
                 System.out.print("; FileNo: " + fileNo + ";");
 
+                int[] nominalHash = filesController.getNominalHash();
                 System.out.print(" Nominal Hash:[");
                 for (int n = 0; n < 5; n++) {
                     if (nominalHash[n] != -1)
                         System.out.print((n != 0 ? ", " : "") + nominalHash[n]);
                 }
+                int[] suitHash = filesController.getSuitHash();
                 System.out.print("]; Suit Hash:[");
                 for (int n = 0; n < 5; n++) {
                     if (suitHash[n] != -1)
@@ -45,19 +49,18 @@ public class Main {
             /*]*/
 
             System.out.println();
-
-            while (result.contains("?")) {
-                notIdentified++;
-                result = result.replace("?", "");
-            }
+            fileNo++;
         }
+        
         /*[*/
         if (debugPrint) {
             long totalTime = System.currentTimeMillis() - startTime;
+            int totalFiles = filesController.getTotalFiles();
+            int notIdentified = filesController.getNotIdentified();
             System.out.println(
-                    "Files:" + fileNo + ";" +
-                            " Not Identified:" + notIdentified + " (" + ((float) notIdentified * 100 / fileNo) + "%);" +
-                            " Time:" + totalTime + " ms; Per file:" + totalTime / fileNo + " ms.");
+                    "Files:" + totalFiles + ";" +
+                            " Not Identified:" + notIdentified + " (" + ((float) notIdentified * 100 / totalFiles) + "%);" +
+                            " Time:" + totalTime + " ms; Per file:" + totalTime / totalFiles + " ms.");
         }
         /*]*/
     }

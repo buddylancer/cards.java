@@ -10,8 +10,9 @@ import java.awt.*;
 import java.awt.image.*;
 import java.io.*;
 import java.util.*;
+//import java.util.concurrent.CompletableFuture;
 
-public class Controller {
+public class CardsController {
     private ClassLoader classLoader;
 
     private final String nominalNames[] = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
@@ -39,7 +40,7 @@ public class Controller {
 
     private int fileNo = -1, cardNo = -1, checkNo = -1; //DEBUG
 
-    public Controller() {
+    public CardsController() {
         classLoader = getClass().getClassLoader();
         try {
             preloadImages(nominalNames, nominalImages, nominalSize);
@@ -72,22 +73,27 @@ public class Controller {
         }
     }
 
-    public String identifyCards(File file /*[*/, int counter, int[] nominalHash, int[] suitHash /*]*/) {
+    public String identifyCards(String fileName /*[*/, int[] nominalHash, int[] suitHash /*]*/) {
         BufferedImage image;
         try {
-            image = ImageIO.read(file);
+            image = ImageIO.read(new File(fileName));
         }
         catch (Exception ex) {
-            return("Can not load image '" + file.getName() + "'! Skipped for now!");
+            return("Can not load image '" + fileName+ "'! Skipped for now!");
         }
         if (image.getWidth() < imageSize.width || image.getHeight() < imageSize.height) // Very simple testing for required image type
             return "This is not required image!";
         String cardsFound = "";
-        fileNo = counter; //DEBUG
+        //Object  resultsArray[] = new Object[5];
         for (int n = 0; n < 5; n++) {
             cardNo = n + 1; //DEBUG
             cardsFound += identifyCard(image, cards[n] /*[*/, n, nominalHash, suitHash /*]*/);
+            //Point card = cards[n];
+            //resultsArray[n] = CompletableFuture.supplyAsync(() -> identifyCard(image, card /*[*/, cardNo, nominalHash, suitHash /*]*/));
         }
+        //for (int n = 0; n < 5; n++) {
+        //    cardsFound += ((CompletableFuture<String>)resultsArray[n]).get();
+        //}
         return cardsFound;
     }
 
@@ -124,9 +130,9 @@ public class Controller {
         BufferedImage image1 =
                 getBlackAndWhiteImage(image.getSubimage(shiftX - half(delta.width), shiftY - half(delta.height), referenceSize.width + delta.width + extraShiftX, referenceSize.height + delta.height), true);
         /*[*/
-        if (fileNo == 1 && cardNo == 3 && ((checkNo == 1 && nominalNames[nominalOrSuitNo] == "10") || (checkNo == 2 && suitNames[nominalOrSuitNo] == "?????"))) {
-            int x=1;
-        }
+        //if (fileNo == 1 && cardNo == 3 && ((checkNo == 1 && nominalNames[nominalOrSuitNo] == "10") || (checkNo == 2 && suitNames[nominalOrSuitNo] == "?????"))) {
+        //    int x=1;
+       // }
         /*]*/
         int shiftXa = half(image1.getWidth() - image2.getWidth()) - 1 + half(delta.width);
         int shiftYa = half(image1.getHeight() - image2.getHeight()) - 1 + half(delta.height);
